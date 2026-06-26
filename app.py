@@ -109,26 +109,26 @@ def load_and_clean_data():
     df = df.dropna(subset=['close_price'])
     df = df[df['close_price'] > 0]
     
-    # 2. If open_price is 0 or NaN, set it to close_price
+    # 2. Filter out illiquid stocks ("saham tidur") with > 2% zero open price days
+    # We do this BEFORE cleaning the open_price column to accurately measure raw data quality
+    open_p_temp = df['open_price'].fillna(0)
+    ticker_zeros = df.groupby('kode').apply(lambda g: (open_p_temp.loc[g.index] <= 0).sum() / len(g) * 100)
+    healthy_tickers = ticker_zeros[ticker_zeros <= 2.0].index.tolist()
+    df = df[df['kode'].isin(healthy_tickers)]
+    
+    # 3. If open_price is 0 or NaN, set it to close_price
     df['open_price'] = df['open_price'].fillna(df['close_price'])
     df.loc[df['open_price'] <= 0, 'open_price'] = df['close_price']
     
-    # 3. If high_price is 0, NaN, or lower than close/open, bound it
+    # 4. If high_price is 0, NaN, or lower than close/open, bound it
     df['high_price'] = df['high_price'].fillna(df['close_price'])
     df.loc[df['high_price'] <= 0, 'high_price'] = df['close_price']
     df['high_price'] = df[['high_price', 'open_price', 'close_price']].max(axis=1)
     
-    # 4. If low_price is 0, NaN, or higher than close/open, bound it
+    # 5. If low_price is 0, NaN, or higher than close/open, bound it
     df['low_price'] = df['low_price'].fillna(df['close_price'])
     df.loc[df['low_price'] <= 0, 'low_price'] = df['close_price']
     df['low_price'] = df[['low_price', 'open_price', 'close_price']].min(axis=1)
-    
-    # 5. Filter out illiquid stocks ("saham tidur") with > 2% zero open price days
-    # This removes MAPB and other dormant stocks with visual errors/gaps from the dashboard
-    # Group by kode and calculate percentage of days where open_price <= 0
-    ticker_zeros = df.groupby('kode').apply(lambda g: (g['open_price'] <= 0).sum() / len(g) * 100)
-    healthy_tickers = ticker_zeros[ticker_zeros <= 2.0].index.tolist()
-    df = df[df['kode'].isin(healthy_tickers)]
     
     df = df.drop_duplicates(subset=['kode', 'tanggal'])
     df = df.sort_values(by=['kode', 'tanggal']).reset_index(drop=True)
@@ -425,7 +425,7 @@ prior_days_val = 25
 # ==============================================================================
 # PRE-CALCULATE OVERALL STATS
 # ==============================================================================
-@st.cache_data
+# Commented out cache to force recalculation with filtered dataset
 def scan_all_stocks_combined(dist, tol, prior_days, prior_pct):
     all_patterns = []
     tickers = df['kode'].unique()
