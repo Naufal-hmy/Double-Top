@@ -86,7 +86,7 @@ path_lokal = r"c:\Users\41123\Documents\Semester 6\Sistem Cerdas\transaksi_haria
 # ==============================================================================
 # DATA INGESTION & PREPROCESSING
 # ==============================================================================
-@st.cache_data
+# Commented out cache to force reload and clean data
 def load_and_clean_data():
     target_path = path_lokal if os.path.exists(path_lokal) else csv_path
     if not os.path.exists(target_path):
