@@ -566,16 +566,25 @@ def render_algorithm_chart(algo_name, pattern, df_ticker, key_suffix):
     end_plot = min(len(df_ticker), (outcome_idx if outcome_idx is not None else breakout_idx) + 30)
     df_sub = df_ticker.iloc[start_plot:end_plot].reset_index(drop=True)
     
+    # Convert dates to string format to eliminate weekend/holiday gaps
+    df_sub['tanggal_str'] = df_sub['tanggal'].dt.strftime('%Y-%m-%d')
+    
     p1_p = p1_idx - start_plot
     p2_p = p2_idx - start_plot
     tr_p = trough_idx - start_plot
     br_p = breakout_idx - start_plot
     out_p = (outcome_idx - start_plot) if outcome_idx is not None else None
     
+    p1_date_str = df_sub['tanggal_str'].iloc[p1_p]
+    p2_date_str = df_sub['tanggal_str'].iloc[p2_p]
+    tr_date_str = df_sub['tanggal_str'].iloc[tr_p]
+    br_date_str = df_sub['tanggal_str'].iloc[br_p]
+    out_date_str = df_sub['tanggal_str'].iloc[out_p] if out_p is not None else None
+    
     fig = go.Figure()
     
     fig.add_trace(go.Candlestick(
-        x=df_sub['tanggal'],
+        x=df_sub['tanggal_str'],
         open=df_sub['open_price'],
         high=df_sub['high_price'],
         low=df_sub['low_price'],
@@ -586,7 +595,7 @@ def render_algorithm_chart(algo_name, pattern, df_ticker, key_suffix):
     ))
     
     fig.add_trace(go.Scatter(
-        x=[df_sub['tanggal'].iloc[p1_p], df_sub['tanggal'].iloc[p2_p]],
+        x=[p1_date_str, p2_date_str],
         y=[pattern['p1_price'], pattern['p2_price']],
         mode='markers+text',
         marker=dict(color='#ff3333', size=13, symbol='triangle-down'),
@@ -597,7 +606,7 @@ def render_algorithm_chart(algo_name, pattern, df_ticker, key_suffix):
     ))
     
     fig.add_trace(go.Scatter(
-        x=[df_sub['tanggal'].iloc[tr_p]],
+        x=[tr_date_str],
         y=[pattern['trough_price']],
         mode='markers+text',
         marker=dict(color='#3399ff', size=11, symbol='triangle-up'),
@@ -608,7 +617,7 @@ def render_algorithm_chart(algo_name, pattern, df_ticker, key_suffix):
     ))
     
     fig.add_trace(go.Scatter(
-        x=[df_sub['tanggal'].iloc[p1_p], df_sub['tanggal'].iloc[br_p]],
+        x=[p1_date_str, br_date_str],
         y=[pattern['trough_price'], pattern['trough_price']],
         mode='lines',
         line=dict(color='#3399ff', width=2, dash='dash'),
@@ -616,7 +625,7 @@ def render_algorithm_chart(algo_name, pattern, df_ticker, key_suffix):
     ))
     
     fig.add_trace(go.Scatter(
-        x=[df_sub['tanggal'].iloc[br_p]],
+        x=[br_date_str],
         y=[pattern['breakout_price']],
         mode='markers+text',
         marker=dict(color='orange', size=12, symbol='x'),
@@ -626,7 +635,7 @@ def render_algorithm_chart(algo_name, pattern, df_ticker, key_suffix):
         textfont=dict(color='orange')
     ))
     
-    x_dates_post = df_sub['tanggal'].iloc[br_p:]
+    x_dates_post = df_sub['tanggal_str'].iloc[br_p:]
     fig.add_trace(go.Scatter(
         x=x_dates_post,
         y=[pattern['target_price']] * len(x_dates_post),
@@ -643,11 +652,11 @@ def render_algorithm_chart(algo_name, pattern, df_ticker, key_suffix):
         name='Stop Loss (SL)'
     ))
     
-    if out_p is not None:
+    if out_date_str is not None:
         status_txt = "TP TERCAPAI (SUKSES)" if pattern['success'] else "SL TERKENA (GAGAL)"
         warna = '#ffd700' if pattern['success'] else '#ff3333'
         fig.add_trace(go.Scatter(
-            x=[df_sub['tanggal'].iloc[out_p]],
+            x=[out_date_str],
             y=[df_sub['close_price'].iloc[out_p]],
             mode='markers+text',
             marker=dict(color=warna, size=15, symbol='star' if pattern['success'] else 'octagon'),
@@ -658,8 +667,8 @@ def render_algorithm_chart(algo_name, pattern, df_ticker, key_suffix):
         ))
         
     fig.add_vrect(
-        x0=df_sub['tanggal'].iloc[p1_p],
-        x1=df_sub['tanggal'].iloc[br_p],
+        x0=p1_date_str,
+        x1=br_date_str,
         fillcolor='rgba(255, 0, 0, 0.05)',
         layer='below',
         line_width=0,
@@ -668,10 +677,10 @@ def render_algorithm_chart(algo_name, pattern, df_ticker, key_suffix):
         annotation_font=dict(color='#ff3333', size=11)
     )
     
-    end_outcome = df_sub['tanggal'].iloc[out_p] if out_p is not None else df_sub['tanggal'].iloc[-1]
+    end_outcome_str = out_date_str if out_date_str is not None else df_sub['tanggal_str'].iloc[-1]
     fig.add_vrect(
-        x0=df_sub['tanggal'].iloc[br_p],
-        x1=end_outcome,
+        x0=br_date_str,
+        x1=end_outcome_str,
         fillcolor='rgba(255, 215, 0, 0.04)' if pattern['success'] else 'rgba(128, 128, 128, 0.04)',
         layer='below',
         line_width=0,
@@ -679,10 +688,9 @@ def render_algorithm_chart(algo_name, pattern, df_ticker, key_suffix):
         annotation_position='top left',
         annotation_font=dict(color='#ffd700' if pattern['success'] else '#888888', size=11)
     )
-
     
     fig.add_vline(
-        x=df_sub['tanggal'].iloc[br_p],
+        x=br_date_str,
         line_width=2,
         line_dash='dash',
         line_color='orange',
@@ -703,6 +711,13 @@ def render_algorithm_chart(algo_name, pattern, df_ticker, key_suffix):
         margin=dict(t=20, b=30, l=40, r=40),
         showlegend=False,
         height=450
+    )
+    
+    # Force X-axis to be a category axis to remove weekend/holiday gaps
+    fig.update_xaxes(
+        type='category',
+        tickangle=-45,
+        nticks=10
     )
     
     st.plotly_chart(fig, use_container_width=True, key=f"plotly_chart_{key_suffix}")
