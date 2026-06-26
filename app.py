@@ -123,6 +123,13 @@ def load_and_clean_data():
     df.loc[df['low_price'] <= 0, 'low_price'] = df['close_price']
     df['low_price'] = df[['low_price', 'open_price', 'close_price']].min(axis=1)
     
+    # 5. Filter out illiquid stocks ("saham tidur") with > 2% zero open price days
+    # This removes MAPB and other dormant stocks with visual errors/gaps from the dashboard
+    # Group by kode and calculate percentage of days where open_price <= 0
+    ticker_zeros = df.groupby('kode').apply(lambda g: (g['open_price'] <= 0).sum() / len(g) * 100)
+    healthy_tickers = ticker_zeros[ticker_zeros <= 2.0].index.tolist()
+    df = df[df['kode'].isin(healthy_tickers)]
+    
     df = df.drop_duplicates(subset=['kode', 'tanggal'])
     df = df.sort_values(by=['kode', 'tanggal']).reset_index(drop=True)
     return df
