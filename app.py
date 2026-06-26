@@ -104,9 +104,25 @@ def load_and_clean_data():
     for col in ['open_price', 'close_price', 'high_price', 'low_price', 'volume']:
         df[col] = pd.to_numeric(df[col], errors='coerce')
         
-    # Filter out empty or zero prices
-    df = df.dropna(subset=['close_price', 'high_price', 'low_price'])
-    df = df[(df['close_price'] > 0) & (df['high_price'] > 0) & (df['low_price'] > 0)]
+    # Clean invalid/zero prices
+    # 1. Fill missing/zero close_price (cannot have a trade without a close price)
+    df = df.dropna(subset=['close_price'])
+    df = df[df['close_price'] > 0]
+    
+    # 2. If open_price is 0 or NaN, set it to close_price
+    df['open_price'] = df['open_price'].fillna(df['close_price'])
+    df.loc[df['open_price'] <= 0, 'open_price'] = df['close_price']
+    
+    # 3. If high_price is 0, NaN, or lower than close/open, bound it
+    df['high_price'] = df['high_price'].fillna(df['close_price'])
+    df.loc[df['high_price'] <= 0, 'high_price'] = df['close_price']
+    df['high_price'] = df[['high_price', 'open_price', 'close_price']].max(axis=1)
+    
+    # 4. If low_price is 0, NaN, or higher than close/open, bound it
+    df['low_price'] = df['low_price'].fillna(df['close_price'])
+    df.loc[df['low_price'] <= 0, 'low_price'] = df['close_price']
+    df['low_price'] = df[['low_price', 'open_price', 'close_price']].min(axis=1)
+    
     df = df.drop_duplicates(subset=['kode', 'tanggal'])
     df = df.sort_values(by=['kode', 'tanggal']).reset_index(drop=True)
     return df
