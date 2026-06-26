@@ -517,10 +517,10 @@ else:
 # MAIN DASHBOARD PAGE
 # ==============================================================================
 st.markdown("<h1 style='text-align: center; color: #00ff88; margin-bottom: 20px;'>DASHBOARD BURSA CERDAS</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #888888; font-size: 14px;'>Sistem Kecerdasan Buatan Deteksi & Backtesting Pola Bearish Reversal \"Double Top\" Saham Indonesia (IDX)</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #888888; font-size: 14px;'>Sistem Kecerdasan Buatan Deteksi & Backtesting Pola Bearish Reversal \"Double Top\" Saham</p>", unsafe_allow_html=True)
 
 # 1. KINERJA GLOBAL ALGORITMA
-st.markdown("<h4 style='color: #00ff88; margin-bottom: 10px;'>Kinerja Global Algoritma (Seluruh Saham IDX)</h4>", unsafe_allow_html=True)
+st.markdown("<h4 style='color: #00ff88; margin-bottom: 10px;'>Kinerja Global Algoritma (Seluruh Saham)</h4>", unsafe_allow_html=True)
 g_col1, g_col2, g_col3, g_col4 = st.columns(4)
 
 global_total = len(all_detected)
