@@ -464,15 +464,30 @@ demo_tickers_sorted = sorted(
     reverse=True
 )
 
+# Filter Emiten berdasarkan Status Pola
+filter_status = st.sidebar.radio(
+    "Filter Emiten Berdasarkan Status Pola:",
+    ["Semua Emiten", "Hanya Sinyal Aktif (Ongoing)"]
+)
+
+# Terapkan penyaringan pada daftar emiten
+if filter_status == "Hanya Sinyal Aktif (Ongoing)":
+    active_tickers = list(set([p['ticker'] for p in all_detected if p['success'] is None]))
+    demo_tickers_display = [t for t in demo_tickers_sorted if t in active_tickers]
+else:
+    demo_tickers_display = demo_tickers_sorted
+
 # Let user choose emiten
-if demo_tickers_sorted:
+if demo_tickers_display:
     selected_emiten = st.sidebar.selectbox(
         "Pilih Emiten untuk Grafik:",
-        demo_tickers_sorted,
+        demo_tickers_display,
         format_func=lambda x: f"{x} (Akurasi: {ticker_stats[x]['akurasi']:.0f}% | {ticker_stats[x]['sukses']} TP / {ticker_stats[x]['gagal']} SL)"
     )
 else:
+    st.sidebar.info("Tidak ada emiten dengan Sinyal Aktif (Ongoing) saat ini.")
     selected_emiten = "TIDAK ADA SAHAM TERDETEKSI"
+
 
 
 # ==============================================================================
